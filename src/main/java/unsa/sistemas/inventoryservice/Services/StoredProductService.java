@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import unsa.sistemas.inventoryservice.DTOs.StoredProductDTO;
 import unsa.sistemas.inventoryservice.Models.StoredProduct;
-import unsa.sistemas.inventoryservice.Models.Product;
-import unsa.sistemas.inventoryservice.Models.Warehouse;
 import unsa.sistemas.inventoryservice.Repositories.StoredProductRepository;
 import unsa.sistemas.inventoryservice.Repositories.ProductRepository;
 import unsa.sistemas.inventoryservice.Repositories.WarehouseRepository;
@@ -20,10 +18,13 @@ public class StoredProductService {
     private final WarehouseRepository warehouseRepository;
 
     public StoredProduct createStoredProduct(StoredProductDTO dto) {
-        StoredProduct storedProduct = new StoredProduct();
-        productRepository.findById(dto.getProductId()).ifPresent(storedProduct::setProduct);
-        warehouseRepository.findById(dto.getWarehouseId()).ifPresent(storedProduct::setWarehouse);
-        storedProduct.setStock(dto.getStock());
+        StoredProduct storedProduct = StoredProduct.builder()
+            .product(productRepository.findById(dto.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Product not found")))
+            .warehouse(warehouseRepository.findById(dto.getWarehouseId())
+                .orElseThrow(() -> new IllegalArgumentException("Warehouse not found")))
+            .stock(dto.getStock())
+            .build();
         return storedProductRepository.save(storedProduct);
     }
 

@@ -9,13 +9,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import unsa.sistemas.inventoryservice.Config.Context.UserContext;
+import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.SubsidiaryDTO;
+import unsa.sistemas.inventoryservice.Models.Role;
 import unsa.sistemas.inventoryservice.Models.Subsidiary;
 import unsa.sistemas.inventoryservice.Services.SubsidiaryService;
+import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
+import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/subsidiaries")
+@RequestMapping("/subsidiaries")
 @RequiredArgsConstructor
 public class SubsidiaryController {
     private final SubsidiaryService subsidiaryService;
@@ -26,9 +32,16 @@ public class SubsidiaryController {
         @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<Subsidiary> createSubsidiary(@RequestBody SubsidiaryDTO dto) {
+    public ResponseEntity<ResponseWrapper<Object>> createSubsidiary(@RequestBody SubsidiaryDTO dto) {
+        UserContext context = UserContextHolder.get();
+        Role role = Role.valueOf(context.getRole());
+
+        if (role != Role.ROLE_PRINCIPAL_ADMIN) {
+            return ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null);
+        }
         Subsidiary subsidiary = subsidiaryService.createSubsidiary(dto);
-        return new ResponseEntity<>(subsidiary, HttpStatus.CREATED);
+        return ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, subsidiary);
+
     }
 
     @Operation(summary = "Get all subsidiaries")

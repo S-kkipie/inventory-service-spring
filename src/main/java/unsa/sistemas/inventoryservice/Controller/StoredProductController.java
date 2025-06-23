@@ -9,13 +9,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import unsa.sistemas.inventoryservice.Config.Context.UserContext;
+import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.StoredProductDTO;
+import unsa.sistemas.inventoryservice.Models.Role;
 import unsa.sistemas.inventoryservice.Models.StoredProduct;
 import unsa.sistemas.inventoryservice.Services.StoredProductService;
+import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
+import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/stored-products")
+@RequestMapping("/stored-products")
 @RequiredArgsConstructor
 public class StoredProductController {
     private final StoredProductService storedProductService;
@@ -26,9 +32,15 @@ public class StoredProductController {
         @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<StoredProduct> createStoredProduct(@RequestBody StoredProductDTO dto) {
+    public ResponseEntity<ResponseWrapper<StoredProduct>> createStoredProduct(@RequestBody StoredProductDTO dto) {
+        UserContext user = UserContextHolder.get();
+
+        if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
+            return ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null);
+        }
+
         StoredProduct storedProduct = storedProductService.createStoredProduct(dto);
-        return new ResponseEntity<>(storedProduct, HttpStatus.CREATED);
+        return ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, storedProduct);
     }
 
     @Operation(summary = "Get all stored products (all stock entries)")

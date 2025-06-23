@@ -2,10 +2,7 @@ package unsa.sistemas.inventoryservice.Models;
 
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import unsa.sistemas.inventoryservice.Models.Keys.StoredProductKey;
 
 @Entity
@@ -13,6 +10,7 @@ import unsa.sistemas.inventoryservice.Models.Keys.StoredProductKey;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class StoredProduct {
     @EmbeddedId
     StoredProductKey  id;
