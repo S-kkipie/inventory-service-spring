@@ -21,6 +21,12 @@ app:
     exchange: tenant.identity.exchange
     queue: inventory.service.queue
 
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.transaction: DEBUG
+    unsa.sistemas.inventoryservice: DEBUG
 
 eureka:
   client:

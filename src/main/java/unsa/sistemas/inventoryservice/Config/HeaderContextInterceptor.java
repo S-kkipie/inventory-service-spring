@@ -3,6 +3,7 @@ package unsa.sistemas.inventoryservice.Config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import unsa.sistemas.inventoryservice.Config.Context.OrgContext;
@@ -14,8 +15,9 @@ import unsa.sistemas.inventoryservice.Models.Role;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class HeaderContextInterceptor implements HandlerInterceptor {
-    DataSourceBasedMultiTenantConnectionProviderImpl dataSourceBasedMultiTenantConnectionProviderImpl;
+    private final DataSourceBasedMultiTenantConnectionProviderImpl dataSourceBasedMultiTenantConnectionProviderImpl;
 
     @Override
     public boolean preHandle(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) throws IOException {
