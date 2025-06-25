@@ -5,7 +5,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import unsa.sistemas.inventoryservice.Config.AppProperties;
 import unsa.sistemas.inventoryservice.DTOs.StoredProductDTO;
 import unsa.sistemas.inventoryservice.Models.StoredProduct;
 import unsa.sistemas.inventoryservice.Repositories.StoredProductRepository;
@@ -19,7 +18,6 @@ public class StoredProductService {
     private final StoredProductRepository storedProductRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
-    private final AppProperties appProperties;
     public StoredProduct createStoredProduct(StoredProductDTO dto) {
         StoredProduct storedProduct = StoredProduct.builder()
             .product(productRepository.findById(dto.getProductId())
@@ -31,9 +29,9 @@ public class StoredProductService {
         return storedProductRepository.save(storedProduct);
     }
 
-    public Page<StoredProduct> getAllStoredProducts(int pageNumber) {
-        Pageable pageable = PageRequest.of(pageNumber, appProperties.getPageSize());
-        return storedProductRepository.findAll(pageable);
+    public Page<StoredProduct> getAllStoredProducts(int pageNumber, int size, String text) {
+        Pageable pageable = PageRequest.of(pageNumber, size);
+        return storedProductRepository.findByProductNameContainingIgnoreCase(text, pageable);
     }
 
     public Optional<StoredProduct> getStoredProduct(Long productId, Long warehouseId) {
@@ -52,4 +50,3 @@ public class StoredProductService {
         storedProductRepository.deleteByProductIdAndWarehouseId(productId, warehouseId);
     }
 }
-

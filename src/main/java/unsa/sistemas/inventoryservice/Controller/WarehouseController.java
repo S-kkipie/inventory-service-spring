@@ -1,6 +1,8 @@
 package unsa.sistemas.inventoryservice.Controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,8 +24,8 @@ public class WarehouseController {
 
     @Operation(summary = "Create a new warehouse")
     @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "Warehouse created successfully", content = @Content(schema = @Schema(implementation = Warehouse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
+            @ApiResponse(responseCode = "201", description = "Warehouse created successfully", content = @Content(schema = @Schema(implementation = Warehouse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
     })
     @PostMapping
     public ResponseEntity<Warehouse> createWarehouse(@RequestBody WarehouseDTO dto) {
@@ -31,17 +33,21 @@ public class WarehouseController {
         return new ResponseEntity<>(warehouse, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Get all warehouses")
+    @Operation(summary = "Find warehouses or get all", parameters = {
+            @Parameter(name = "page", description = "Page number for pagination", in = ParameterIn.QUERY, example = "1"),
+            @Parameter(name = "size", description = "Size of page", in = ParameterIn.QUERY, example = "10"),
+            @Parameter(name = "text", description = "Text for search in name", in = ParameterIn.QUERY, example = "pepito")
+    })
     @ApiResponse(responseCode = "200", description = "List of warehouses", content = @Content(schema = @Schema(implementation = Warehouse.class)))
     @GetMapping
-    public ResponseEntity<Page<Warehouse>> getAllWarehouses(@RequestParam(defaultValue = "0") int page) {
-        return ResponseEntity.ok(warehouseService.getAllWarehouses(page));
+    public ResponseEntity<Page<Warehouse>> getAllWarehouses(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "") String search) {
+        return ResponseEntity.ok(warehouseService.getAllWarehouses(page, size, search));
     }
 
     @Operation(summary = "Get a warehouse by ID")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Warehouse found", content = @Content(schema = @Schema(implementation = Warehouse.class))),
-        @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Warehouse found", content = @Content(schema = @Schema(implementation = Warehouse.class))),
+            @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
     })
     @GetMapping("/{id}")
     public ResponseEntity<Warehouse> getWarehouseById(@PathVariable Long id) {
@@ -52,8 +58,8 @@ public class WarehouseController {
 
     @Operation(summary = "Update a warehouse by ID")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Warehouse updated", content = @Content(schema = @Schema(implementation = Warehouse.class))),
-        @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Warehouse updated", content = @Content(schema = @Schema(implementation = Warehouse.class))),
+            @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
     })
     @PutMapping("/{id}")
     public ResponseEntity<Warehouse> updateWarehouse(@PathVariable Long id, @RequestBody WarehouseDTO dto) {
@@ -64,8 +70,8 @@ public class WarehouseController {
 
     @Operation(summary = "Delete a warehouse by ID")
     @ApiResponses({
-        @ApiResponse(responseCode = "204", description = "Warehouse deleted", content = @Content),
-        @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
+            @ApiResponse(responseCode = "204", description = "Warehouse deleted", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWarehouse(@PathVariable Long id) {

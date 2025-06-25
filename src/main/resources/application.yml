@@ -15,8 +15,6 @@ spring:
 
 
 app:
-  properties:
-    page-size: 10
   aes:
     secure-key: 12345678901234567890123456789012
   rabbitmq:

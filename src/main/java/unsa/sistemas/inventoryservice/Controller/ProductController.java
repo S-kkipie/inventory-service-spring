@@ -1,6 +1,8 @@
 package unsa.sistemas.inventoryservice.Controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -44,11 +46,18 @@ public class ProductController {
         return ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, product);
     }
 
-    @Operation(summary = "Get all products")
+    @Operation(summary = "Get all products", parameters = {
+            @Parameter(name = "page", description = "Page number for pagination", in = ParameterIn.QUERY, example = "0"),
+            @Parameter(name = "size", description = "Size of page", in = ParameterIn.QUERY, example = "10"),
+            @Parameter(name = "search", description = "Text for search in name", in = ParameterIn.QUERY, example = "laptop")
+    })
     @ApiResponse(responseCode = "200", description = "List of products", content = @Content(schema = @Schema(implementation = Product.class)))
     @GetMapping
-    public ResponseEntity<Page<Product>> getAllProducts(@RequestParam(defaultValue = "0") int page) {
-        return ResponseEntity.ok(productService.getAllProducts(page));
+    public ResponseEntity<Page<Product>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String search) {
+        return ResponseEntity.ok(productService.getAllProducts(page, size, search));
     }
 
 
@@ -106,4 +115,3 @@ public class ProductController {
         }
     }
 }
-

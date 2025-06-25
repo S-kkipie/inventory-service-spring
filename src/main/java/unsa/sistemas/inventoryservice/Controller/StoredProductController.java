@@ -1,6 +1,7 @@
 package unsa.sistemas.inventoryservice.Controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -42,11 +43,18 @@ public class StoredProductController {
         return ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, storedProduct);
     }
 
-    @Operation(summary = "Get all stored products (all stock entries)")
+    @Operation(summary = "Get all stored products (all stock entries)", parameters = {
+            @Parameter(name = "page", description = "Page number for pagination", example = "0"),
+            @Parameter(name = "size", description = "Size of page", example = "10"),
+            @Parameter(name = "search", description = "Text for search in product name", example = "laptop")
+    })
     @ApiResponse(responseCode = "200", description = "List of stored products", content = @Content(schema = @Schema(implementation = StoredProduct.class)))
     @GetMapping
-    public ResponseEntity<Page<StoredProduct>> getAllStoredProducts(@RequestParam(defaultValue = "0") int page) {
-        return ResponseEntity.ok(storedProductService.getAllStoredProducts(page));
+    public ResponseEntity<Page<StoredProduct>> getAllStoredProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String search) {
+        return ResponseEntity.ok(storedProductService.getAllStoredProducts(page, size, search));
     }
 
     @Operation(summary = "Get a stored product by product and warehouse IDs")
@@ -87,4 +95,3 @@ public class StoredProductController {
         return ResponseEntity.noContent().build();
     }
 }
-

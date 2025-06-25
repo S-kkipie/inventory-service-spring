@@ -5,7 +5,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import unsa.sistemas.inventoryservice.Config.AppProperties;
 import unsa.sistemas.inventoryservice.DTOs.WarehouseDTO;
 import unsa.sistemas.inventoryservice.Models.Warehouse;
 import unsa.sistemas.inventoryservice.Repositories.WarehouseRepository;
@@ -17,7 +16,7 @@ import java.util.Optional;
 public class WarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final SubsidiaryRepository subsidiaryRepository;
-    private final AppProperties appProperties;
+
     public Warehouse createWarehouse(WarehouseDTO dto) {
         Warehouse warehouse = new Warehouse();
         warehouse.setName(dto.getName());
@@ -28,9 +27,9 @@ public class WarehouseService {
         return warehouseRepository.save(warehouse);
     }
 
-    public Page<Warehouse> getAllWarehouses(int pageNumber) {
-        Pageable pageable = PageRequest.of(pageNumber, appProperties.getPageSize());
-        return warehouseRepository.findAll(pageable);
+    public Page<Warehouse> getAllWarehouses(int pageNumber, int size, String text) {
+        Pageable pageable = PageRequest.of(pageNumber, size);
+        return warehouseRepository.findByNameContainingIgnoreCase(text, pageable);
     }
 
     public Optional<Warehouse> getWarehouseById(Long id) {

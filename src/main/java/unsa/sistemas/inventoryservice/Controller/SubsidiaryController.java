@@ -1,6 +1,7 @@
 package unsa.sistemas.inventoryservice.Controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -43,11 +44,18 @@ public class SubsidiaryController {
 
     }
 
-    @Operation(summary = "Get all subsidiaries")
+    @Operation(summary = "Get all subsidiaries", parameters = {
+            @Parameter(name = "page", description = "Page number for pagination", example = "0"),
+            @Parameter(name = "size", description = "Size of page", example = "10"),
+            @Parameter(name = "search", description = "Text for search in name", example = "Sucursal Lima")
+    })
     @ApiResponse(responseCode = "200", description = "List of subsidiaries", content = @Content(schema = @Schema(implementation = Subsidiary.class)))
     @GetMapping
-    public ResponseEntity<Page<Subsidiary>> getAllSubsidiaries(@RequestParam(defaultValue = "0") int page) {
-        return ResponseEntity.ok(subsidiaryService.getAllSubsidiaries(page));
+    public ResponseEntity<Page<Subsidiary>> getAllSubsidiaries(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String search) {
+        return ResponseEntity.ok(subsidiaryService.getAllSubsidiaries(page, size, search));
     }
 
     @Operation(summary = "Get a subsidiary by ID")
@@ -88,4 +96,3 @@ public class SubsidiaryController {
         return ResponseEntity.noContent().build();
     }
 }
-
