@@ -1,13 +1,15 @@
 package unsa.sistemas.inventoryservice.Services;
 
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import unsa.sistemas.inventoryservice.Config.AppProperties;
 import unsa.sistemas.inventoryservice.DTOs.WarehouseDTO;
 import unsa.sistemas.inventoryservice.Models.Warehouse;
 import unsa.sistemas.inventoryservice.Repositories.WarehouseRepository;
-import unsa.sistemas.inventoryservice.Models.Subsidiary;
 import unsa.sistemas.inventoryservice.Repositories.SubsidiaryRepository;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -15,7 +17,7 @@ import java.util.Optional;
 public class WarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final SubsidiaryRepository subsidiaryRepository;
-
+    private final AppProperties appProperties;
     public Warehouse createWarehouse(WarehouseDTO dto) {
         Warehouse warehouse = new Warehouse();
         warehouse.setName(dto.getName());
@@ -26,8 +28,9 @@ public class WarehouseService {
         return warehouseRepository.save(warehouse);
     }
 
-    public List<Warehouse> getAllWarehouses() {
-        return warehouseRepository.findAll();
+    public Page<Warehouse> getAllWarehouses(int pageNumber) {
+        Pageable pageable = PageRequest.of(pageNumber, appProperties.getPageSize());
+        return warehouseRepository.findAll(pageable);
     }
 
     public Optional<Warehouse> getWarehouseById(Long id) {

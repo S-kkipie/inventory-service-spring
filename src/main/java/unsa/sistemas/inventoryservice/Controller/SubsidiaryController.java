@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,8 +18,6 @@ import unsa.sistemas.inventoryservice.Models.Subsidiary;
 import unsa.sistemas.inventoryservice.Services.SubsidiaryService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
 import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/subsidiaries")
@@ -47,8 +46,8 @@ public class SubsidiaryController {
     @Operation(summary = "Get all subsidiaries")
     @ApiResponse(responseCode = "200", description = "List of subsidiaries", content = @Content(schema = @Schema(implementation = Subsidiary.class)))
     @GetMapping
-    public ResponseEntity<List<Subsidiary>> getAllSubsidiaries() {
-        return ResponseEntity.ok(subsidiaryService.getAllSubsidiaries());
+    public ResponseEntity<Page<Subsidiary>> getAllSubsidiaries(@RequestParam(defaultValue = "0") int page) {
+        return ResponseEntity.ok(subsidiaryService.getAllSubsidiaries(page));
     }
 
     @Operation(summary = "Get a subsidiary by ID")

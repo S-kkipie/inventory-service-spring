@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,6 @@ import unsa.sistemas.inventoryservice.Services.ProductService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
 import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/products")
@@ -47,8 +47,8 @@ public class ProductController {
     @Operation(summary = "Get all products")
     @ApiResponse(responseCode = "200", description = "List of products", content = @Content(schema = @Schema(implementation = Product.class)))
     @GetMapping
-    public ResponseEntity<List<Product>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<Page<Product>> getAllProducts(@RequestParam(defaultValue = "0") int page) {
+        return ResponseEntity.ok(productService.getAllProducts(page));
     }
 
 

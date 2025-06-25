@@ -1,13 +1,16 @@
 package unsa.sistemas.inventoryservice.Services;
 
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import unsa.sistemas.inventoryservice.Config.AppProperties;
 import unsa.sistemas.inventoryservice.DTOs.StoredProductDTO;
 import unsa.sistemas.inventoryservice.Models.StoredProduct;
 import unsa.sistemas.inventoryservice.Repositories.StoredProductRepository;
 import unsa.sistemas.inventoryservice.Repositories.ProductRepository;
 import unsa.sistemas.inventoryservice.Repositories.WarehouseRepository;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -16,7 +19,7 @@ public class StoredProductService {
     private final StoredProductRepository storedProductRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
-
+    private final AppProperties appProperties;
     public StoredProduct createStoredProduct(StoredProductDTO dto) {
         StoredProduct storedProduct = StoredProduct.builder()
             .product(productRepository.findById(dto.getProductId())
@@ -28,8 +31,9 @@ public class StoredProductService {
         return storedProductRepository.save(storedProduct);
     }
 
-    public List<StoredProduct> getAllStoredProducts() {
-        return storedProductRepository.findAll();
+    public Page<StoredProduct> getAllStoredProducts(int pageNumber) {
+        Pageable pageable = PageRequest.of(pageNumber, appProperties.getPageSize());
+        return storedProductRepository.findAll(pageable);
     }
 
     public Optional<StoredProduct> getStoredProduct(Long productId, Long warehouseId) {

@@ -6,13 +6,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import unsa.sistemas.inventoryservice.DTOs.WarehouseDTO;
 import unsa.sistemas.inventoryservice.Models.Warehouse;
 import unsa.sistemas.inventoryservice.Services.WarehouseService;
-import java.util.List;
 
 @RestController
 @RequestMapping("/warehouses")
@@ -34,8 +34,8 @@ public class WarehouseController {
     @Operation(summary = "Get all warehouses")
     @ApiResponse(responseCode = "200", description = "List of warehouses", content = @Content(schema = @Schema(implementation = Warehouse.class)))
     @GetMapping
-    public ResponseEntity<List<Warehouse>> getAllWarehouses() {
-        return ResponseEntity.ok(warehouseService.getAllWarehouses());
+    public ResponseEntity<Page<Warehouse>> getAllWarehouses(@RequestParam(defaultValue = "0") int page) {
+        return ResponseEntity.ok(warehouseService.getAllWarehouses(page));
     }
 
     @Operation(summary = "Get a warehouse by ID")
