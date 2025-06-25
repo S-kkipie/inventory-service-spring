@@ -16,7 +16,7 @@ import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.StoredProductDTO;
 import unsa.sistemas.inventoryservice.Models.Role;
 import unsa.sistemas.inventoryservice.Models.StoredProduct;
-import unsa.sistemas.inventoryservice.Services.StoredProductService;
+import unsa.sistemas.inventoryservice.Services.Rest.StoredProductService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
 import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
 
@@ -50,11 +50,11 @@ public class StoredProductController {
     })
     @ApiResponse(responseCode = "200", description = "List of stored products", content = @Content(schema = @Schema(implementation = StoredProduct.class)))
     @GetMapping
-    public ResponseEntity<Page<StoredProduct>> getAllStoredProducts(
+    public ResponseEntity<ResponseWrapper<Page<StoredProduct>>> getAllStoredProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String search) {
-        return ResponseEntity.ok(storedProductService.getAllStoredProducts(page, size, search));
+        return ResponseHandler.generateResponse("Stored products fetched successfully", HttpStatus.OK, storedProductService.getAllStoredProducts(page, size, search));
     }
 
     @Operation(summary = "Get a stored product by product and warehouse IDs")
@@ -63,10 +63,10 @@ public class StoredProductController {
         @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
     })
     @GetMapping("/product/{productId}/warehouse/{warehouseId}")
-    public ResponseEntity<StoredProduct> getStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
+    public ResponseEntity<ResponseWrapper<StoredProduct>> getStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
         return storedProductService.getStoredProduct(productId, warehouseId)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .map(sp -> ResponseHandler.generateResponse("Stored product found", HttpStatus.OK, sp))
+                .orElseGet(() -> ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null));
     }
 
     @Operation(summary = "Update stock for a stored product entry")
@@ -75,10 +75,10 @@ public class StoredProductController {
         @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
     })
     @PutMapping
-    public ResponseEntity<StoredProduct> updateStoredProduct(@RequestBody StoredProductDTO dto) {
+    public ResponseEntity<ResponseWrapper<StoredProduct>> updateStoredProduct(@RequestBody StoredProductDTO dto) {
         return storedProductService.updateStoredProduct(dto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .map(sp -> ResponseHandler.generateResponse("Stored product updated", HttpStatus.OK, sp))
+                .orElseGet(() -> ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null));
     }
 
     @Operation(summary = "Delete a stored product entry by product and warehouse IDs")
@@ -87,11 +87,11 @@ public class StoredProductController {
         @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
     })
     @DeleteMapping("/product/{productId}/warehouse/{warehouseId}")
-    public ResponseEntity<Void> deleteStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
+    public ResponseEntity<ResponseWrapper<Object>> deleteStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
         if (storedProductService.getStoredProduct(productId, warehouseId).isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null);
         }
         storedProductService.deleteStoredProduct(productId, warehouseId);
-        return ResponseEntity.noContent().build();
+        return ResponseHandler.generateResponse("Stored product deleted", HttpStatus.NO_CONTENT, null);
     }
 }

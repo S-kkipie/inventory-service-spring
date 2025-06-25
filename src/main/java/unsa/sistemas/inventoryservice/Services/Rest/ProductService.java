@@ -1,4 +1,4 @@
-package unsa.sistemas.inventoryservice.Services;
+package unsa.sistemas.inventoryservice.Services.Rest;
 
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;

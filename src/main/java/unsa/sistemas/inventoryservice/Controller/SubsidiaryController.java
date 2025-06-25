@@ -16,7 +16,7 @@ import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.SubsidiaryDTO;
 import unsa.sistemas.inventoryservice.Models.Role;
 import unsa.sistemas.inventoryservice.Models.Subsidiary;
-import unsa.sistemas.inventoryservice.Services.SubsidiaryService;
+import unsa.sistemas.inventoryservice.Services.Rest.SubsidiaryService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
 import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
 
@@ -51,11 +51,11 @@ public class SubsidiaryController {
     })
     @ApiResponse(responseCode = "200", description = "List of subsidiaries", content = @Content(schema = @Schema(implementation = Subsidiary.class)))
     @GetMapping
-    public ResponseEntity<Page<Subsidiary>> getAllSubsidiaries(
+    public ResponseEntity<ResponseWrapper<Page<Subsidiary>>> getAllSubsidiaries(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String search) {
-        return ResponseEntity.ok(subsidiaryService.getAllSubsidiaries(page, size, search));
+        return ResponseHandler.generateResponse("Subsidiaries fetched successfully", HttpStatus.OK, subsidiaryService.getAllSubsidiaries(page, size, search));
     }
 
     @Operation(summary = "Get a subsidiary by ID")
@@ -64,10 +64,10 @@ public class SubsidiaryController {
         @ApiResponse(responseCode = "404", description = "Subsidiary not found", content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Subsidiary> getSubsidiaryById(@PathVariable Long id) {
+    public ResponseEntity<ResponseWrapper<Subsidiary>> getSubsidiaryById(@PathVariable Long id) {
         return subsidiaryService.getSubsidiaryById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .map(subsidiary -> ResponseHandler.generateResponse("Subsidiary found", HttpStatus.OK, subsidiary))
+                .orElseGet(() -> ResponseHandler.generateResponse("Subsidiary not found", HttpStatus.NOT_FOUND, null));
     }
 
     @Operation(summary = "Update a subsidiary by ID")
@@ -76,10 +76,10 @@ public class SubsidiaryController {
         @ApiResponse(responseCode = "404", description = "Subsidiary not found", content = @Content)
     })
     @PutMapping("/{id}")
-    public ResponseEntity<Subsidiary> updateSubsidiary(@PathVariable Long id, @RequestBody SubsidiaryDTO dto) {
+    public ResponseEntity<ResponseWrapper<Subsidiary>> updateSubsidiary(@PathVariable Long id, @RequestBody SubsidiaryDTO dto) {
         return subsidiaryService.updateSubsidiary(id, dto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .map(subsidiary -> ResponseHandler.generateResponse("Subsidiary updated", HttpStatus.OK, subsidiary))
+                .orElseGet(() -> ResponseHandler.generateResponse("Subsidiary not found", HttpStatus.NOT_FOUND, null));
     }
 
     @Operation(summary = "Delete a subsidiary by ID")
@@ -88,11 +88,11 @@ public class SubsidiaryController {
         @ApiResponse(responseCode = "404", description = "Subsidiary not found", content = @Content)
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSubsidiary(@PathVariable Long id) {
+    public ResponseEntity<ResponseWrapper<Object>> deleteSubsidiary(@PathVariable Long id) {
         if (subsidiaryService.getSubsidiaryById(id).isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseHandler.generateResponse("Subsidiary not found", HttpStatus.NOT_FOUND, null);
         }
         subsidiaryService.deleteSubsidiary(id);
-        return ResponseEntity.noContent().build();
+        return ResponseHandler.generateResponse("Subsidiary deleted", HttpStatus.NO_CONTENT, null);
     }
 }

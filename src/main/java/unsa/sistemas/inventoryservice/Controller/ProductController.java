@@ -17,7 +17,7 @@ import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.ProductDTO;
 import unsa.sistemas.inventoryservice.Models.Product;
 import unsa.sistemas.inventoryservice.Models.Role;
-import unsa.sistemas.inventoryservice.Services.ProductService;
+import unsa.sistemas.inventoryservice.Services.Rest.ProductService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
 import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
 
@@ -53,11 +53,11 @@ public class ProductController {
     })
     @ApiResponse(responseCode = "200", description = "List of products", content = @Content(schema = @Schema(implementation = Product.class)))
     @GetMapping
-    public ResponseEntity<Page<Product>> getAllProducts(
+    public ResponseEntity<ResponseWrapper<Page<Product>>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String search) {
-        return ResponseEntity.ok(productService.getAllProducts(page, size, search));
+        return ResponseHandler.generateResponse("Products fetched successfully", HttpStatus.OK, productService.getAllProducts(page, size, search));
     }
 
 
@@ -67,10 +67,10 @@ public class ProductController {
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ResponseWrapper<Product>> getProductById(@PathVariable Long id) {
         return productService.getProductById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+                .map(product -> ResponseHandler.generateResponse("Product found", HttpStatus.OK, product))
+                .orElseGet(() -> ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null));
     }
 
     @Operation(summary = "Update a product by ID")
@@ -81,16 +81,13 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ResponseWrapper<Product>> updateProduct(@PathVariable Long id, @RequestBody ProductDTO dto) {
         UserContext user = UserContextHolder.get();
-
         if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
             return ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null);
         }
         try {
             return ResponseHandler.generateResponse("Product updated successfully", HttpStatus.OK, productService.updateProduct(id, dto));
-
         } catch (IllegalArgumentException e) {
             return ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null);
-
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Failed to update product", HttpStatus.BAD_REQUEST, null);
         }
@@ -105,11 +102,9 @@ public class ProductController {
     public ResponseEntity<ResponseWrapper<Object>> deleteProduct(@PathVariable Long id) {
         try {
             productService.deleteProduct(id);
-            return ResponseHandler.generateResponse("Product deleted successfully", HttpStatus.OK, null);
-
+            return ResponseHandler.generateResponse("Product deleted successfully", HttpStatus.NO_CONTENT, null);
         } catch (IllegalArgumentException e) {
             return ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null);
-
         } catch (Exception e) {
             return ResponseHandler.generateResponse("Failed to delete product", HttpStatus.BAD_REQUEST, null);
         }
