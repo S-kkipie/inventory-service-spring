@@ -56,7 +56,7 @@ public class MultiTenantConfig {
     @Bean(name = "tenantDefaultDataSource")
     public DataSource tenantDataSource() {
         return DataSourceBuilder.create()
-                .url(hibernateProperties.getTenantUrl())
+                .url(hibernateProperties.getDefaultTenantUrl())
                 .username(hibernateProperties.getUsername())
                 .password(hibernateProperties.getPassword())
                 .driverClassName(hibernateProperties.getDriverClass())

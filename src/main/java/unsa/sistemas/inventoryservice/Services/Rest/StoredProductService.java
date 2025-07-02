@@ -10,7 +10,8 @@ import unsa.sistemas.inventoryservice.Models.StoredProduct;
 import unsa.sistemas.inventoryservice.Repositories.StoredProductRepository;
 import unsa.sistemas.inventoryservice.Repositories.ProductRepository;
 import unsa.sistemas.inventoryservice.Repositories.WarehouseRepository;
-import java.util.Optional;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 @AllArgsConstructor
@@ -18,35 +19,46 @@ public class StoredProductService {
     private final StoredProductRepository storedProductRepository;
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
-    public StoredProduct createStoredProduct(StoredProductDTO dto) {
-        StoredProduct storedProduct = StoredProduct.builder()
-            .product(productRepository.findById(dto.getProductId())
-                .orElseThrow(() -> new IllegalArgumentException("Product not found")))
-            .warehouse(warehouseRepository.findById(dto.getWarehouseId())
-                .orElseThrow(() -> new IllegalArgumentException("Warehouse not found")))
-            .stock(dto.getStock())
-            .build();
-        return storedProductRepository.save(storedProduct);
+
+    public Mono<StoredProduct> createStoredProduct(StoredProductDTO dto) {
+        return Mono.fromCallable(() -> {
+                    StoredProduct storedProduct = StoredProduct.builder()
+                            .product(productRepository.findById(dto.getProductId())
+                                    .orElseThrow(() -> new IllegalArgumentException("Product not found")))
+                            .warehouse(warehouseRepository.findById(dto.getWarehouseId())
+                                    .orElseThrow(() -> new IllegalArgumentException("Warehouse not found")))
+                            .stock(dto.getStock())
+                            .build();
+                    return storedProductRepository.save(storedProduct);
+                }
+        ).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public Page<StoredProduct> getAllStoredProducts(int pageNumber, int size, String text) {
-        Pageable pageable = PageRequest.of(pageNumber, size);
-        return storedProductRepository.findByProductNameContainingIgnoreCase(text, pageable);
+    public Mono<Page<StoredProduct>> getAllStoredProducts(int pageNumber, int size, String text) {
+        return Mono.fromCallable(() -> {
+            Pageable pageable = PageRequest.of(pageNumber, size);
+            return storedProductRepository.findByProductNameContainingIgnoreCase(text, pageable);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public Optional<StoredProduct> getStoredProduct(Long productId, Long warehouseId) {
-        return storedProductRepository.findByProductIdAndWarehouseId(productId, warehouseId);
+    public Mono<StoredProduct> getStoredProduct(Long productId, Long warehouseId) {
+        return Mono.fromCallable(() -> storedProductRepository.findByProductIdAndWarehouseId(productId, warehouseId).orElse(null))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
-    public Optional<StoredProduct> updateStoredProduct(StoredProductDTO dto) {
-        return storedProductRepository.findByProductIdAndWarehouseId(dto.getProductId(), dto.getWarehouseId())
-            .map(storedProduct -> {
-                storedProduct.setStock(dto.getStock());
-                return storedProductRepository.save(storedProduct);
-            });
+    public Mono<StoredProduct> updateStoredProduct(StoredProductDTO dto) {
+        return Mono.fromCallable(() ->
+                storedProductRepository.findByProductIdAndWarehouseId(dto.getProductId(), dto.getWarehouseId())
+                        .map(storedProduct -> {
+                            storedProduct.setStock(dto.getStock());
+                            return storedProductRepository.save(storedProduct);
+                        }).orElse(null)
+        ).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public void deleteStoredProduct(Long productId, Long warehouseId) {
-        storedProductRepository.deleteByProductIdAndWarehouseId(productId, warehouseId);
+    public Mono<Void> deleteStoredProduct(Long productId, Long warehouseId) {
+        return Mono.fromRunnable(() -> storedProductRepository.deleteByProductIdAndWarehouseId(productId, warehouseId))
+                .subscribeOn(Schedulers.boundedElastic())
+                .then();
     }
 }

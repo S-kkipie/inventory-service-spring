@@ -9,7 +9,8 @@ import unsa.sistemas.inventoryservice.DTOs.WarehouseDTO;
 import unsa.sistemas.inventoryservice.Models.Warehouse;
 import unsa.sistemas.inventoryservice.Repositories.WarehouseRepository;
 import unsa.sistemas.inventoryservice.Repositories.SubsidiaryRepository;
-import java.util.Optional;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 @AllArgsConstructor
@@ -17,38 +18,46 @@ public class WarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final SubsidiaryRepository subsidiaryRepository;
 
-    public Warehouse createWarehouse(WarehouseDTO dto) {
-        Warehouse warehouse = new Warehouse();
-        warehouse.setName(dto.getName());
-        warehouse.setDirection(dto.getDirection());
-        if (dto.getSubsidiaryId() != null) {
-            subsidiaryRepository.findById(dto.getSubsidiaryId()).ifPresent(warehouse::setSubsidiary);
-        }
-        return warehouseRepository.save(warehouse);
-    }
-
-    public Page<Warehouse> getAllWarehouses(int pageNumber, int size, String text) {
-        Pageable pageable = PageRequest.of(pageNumber, size);
-        return warehouseRepository.findByNameContainingIgnoreCase(text, pageable);
-    }
-
-    public Optional<Warehouse> getWarehouseById(Long id) {
-        return warehouseRepository.findById(id);
-    }
-
-    public Optional<Warehouse> updateWarehouse(Long id, WarehouseDTO dto) {
-        return warehouseRepository.findById(id).map(warehouse -> {
+    public Mono<Warehouse> createWarehouse(WarehouseDTO dto) {
+        return Mono.fromCallable(() -> {
+            Warehouse warehouse = new Warehouse();
             warehouse.setName(dto.getName());
             warehouse.setDirection(dto.getDirection());
             if (dto.getSubsidiaryId() != null) {
                 subsidiaryRepository.findById(dto.getSubsidiaryId()).ifPresent(warehouse::setSubsidiary);
             }
             return warehouseRepository.save(warehouse);
-        });
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public void deleteWarehouse(Long id) {
-        warehouseRepository.deleteById(id);
+    public Mono<Page<Warehouse>> getAllWarehouses(int pageNumber, int size, String text) {
+        return Mono.fromCallable(() -> {
+            Pageable pageable = PageRequest.of(pageNumber, size);
+            return warehouseRepository.findByNameContainingIgnoreCase(text, pageable);
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    public Mono<Warehouse> getWarehouseById(Long id) {
+        return Mono.fromCallable(() -> warehouseRepository.findById(id).orElse(null))
+                   .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    public Mono<Warehouse> updateWarehouse(Long id, WarehouseDTO dto) {
+        return Mono.fromCallable(() ->
+            warehouseRepository.findById(id).map(warehouse -> {
+                warehouse.setName(dto.getName());
+                warehouse.setDirection(dto.getDirection());
+                if (dto.getSubsidiaryId() != null) {
+                    subsidiaryRepository.findById(dto.getSubsidiaryId()).ifPresent(warehouse::setSubsidiary);
+                }
+                return warehouseRepository.save(warehouse);
+            }).orElse(null)
+        ).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    public Mono<Void> deleteWarehouse(Long id) {
+        return Mono.fromRunnable(() -> warehouseRepository.deleteById(id))
+                   .subscribeOn(Schedulers.boundedElastic())
+                   .then();
     }
 }
-

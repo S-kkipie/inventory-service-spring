@@ -11,14 +11,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 import unsa.sistemas.inventoryservice.Config.Context.UserContext;
-import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.StoredProductDTO;
 import unsa.sistemas.inventoryservice.Models.Role;
 import unsa.sistemas.inventoryservice.Models.StoredProduct;
 import unsa.sistemas.inventoryservice.Services.Rest.StoredProductService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
 import unsa.sistemas.inventoryservice.Utils.ResponseWrapper;
+
 
 @RestController
 @RequestMapping("/stored-products")
@@ -28,19 +29,23 @@ public class StoredProductController {
 
     @Operation(summary = "Create a new stored product entry (stock in warehouse)")
     @ApiResponses({
-        @ApiResponse(responseCode = "201", description = "Stored product created successfully", content = @Content(schema = @Schema(implementation = StoredProduct.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
+            @ApiResponse(responseCode = "201", description = "Stored product created successfully", content = @Content(schema = @Schema(implementation = StoredProduct.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<ResponseWrapper<StoredProduct>> createStoredProduct(@RequestBody StoredProductDTO dto) {
-        UserContext user = UserContextHolder.get();
+    public Mono<ResponseEntity<ResponseWrapper<StoredProduct>>> createStoredProduct(@RequestBody Mono<StoredProductDTO> body) {
+        return Mono.deferContextual(ctx -> {
+            UserContext user = ctx.get(UserContext.KEY);
 
-        if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
-            return ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null);
-        }
+            if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
+                return Mono.just(ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null));
+            }
 
-        StoredProduct storedProduct = storedProductService.createStoredProduct(dto);
-        return ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, storedProduct);
+            return body.flatMap(dto ->
+                    storedProductService.createStoredProduct(dto)
+                            .map(storedProduct -> ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, storedProduct))
+            );
+        });
     }
 
     @Operation(summary = "Get all stored products (all stock entries)", parameters = {
@@ -50,48 +55,65 @@ public class StoredProductController {
     })
     @ApiResponse(responseCode = "200", description = "List of stored products", content = @Content(schema = @Schema(implementation = StoredProduct.class)))
     @GetMapping
-    public ResponseEntity<ResponseWrapper<Page<StoredProduct>>> getAllStoredProducts(
+    public Mono<ResponseEntity<ResponseWrapper<Page<StoredProduct>>>> getAllStoredProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String search) {
-        return ResponseHandler.generateResponse("Stored products fetched successfully", HttpStatus.OK, storedProductService.getAllStoredProducts(page, size, search));
+        return storedProductService.getAllStoredProducts(page, size, search).map(storedProducts -> ResponseHandler.generateResponse("Stored products fetched successfully", HttpStatus.OK, storedProducts));
     }
 
     @Operation(summary = "Get a stored product by product and warehouse IDs")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Stored product found", content = @Content(schema = @Schema(implementation = StoredProduct.class))),
-        @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Stored product found", content = @Content(schema = @Schema(implementation = StoredProduct.class))),
+            @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
     })
     @GetMapping("/product/{productId}/warehouse/{warehouseId}")
-    public ResponseEntity<ResponseWrapper<StoredProduct>> getStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
+    public Mono<ResponseEntity<ResponseWrapper<StoredProduct>>> getStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
         return storedProductService.getStoredProduct(productId, warehouseId)
-                .map(sp -> ResponseHandler.generateResponse("Stored product found", HttpStatus.OK, sp))
-                .orElseGet(() -> ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null));
+                .map(sp -> {
+                    if (sp == null) {
+                        return ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null);
+                    }
+                    return ResponseHandler.generateResponse("Stored product found", HttpStatus.OK, sp);
+                });
     }
 
     @Operation(summary = "Update stock for a stored product entry")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Stored product updated", content = @Content(schema = @Schema(implementation = StoredProduct.class))),
-        @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Stored product updated", content = @Content(schema = @Schema(implementation = StoredProduct.class))),
+            @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
     })
     @PutMapping
-    public ResponseEntity<ResponseWrapper<StoredProduct>> updateStoredProduct(@RequestBody StoredProductDTO dto) {
-        return storedProductService.updateStoredProduct(dto)
-                .map(sp -> ResponseHandler.generateResponse("Stored product updated", HttpStatus.OK, sp))
-                .orElseGet(() -> ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null));
+    public Mono<ResponseEntity<ResponseWrapper<StoredProduct>>> updateStoredProduct(@RequestBody StoredProductDTO dto) {
+        return Mono.deferContextual(ctx -> {
+            UserContext uc = ctx.get(UserContext.KEY);
+            if (!uc.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
+                return Mono.just(ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null));
+            }
+
+            return storedProductService.updateStoredProduct(dto)
+                    .map(sp -> {
+                        if (sp == null) {
+                            return ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null);
+                        }
+                        return ResponseHandler.generateResponse("Stored product updated", HttpStatus.OK, sp);
+                    });
+        });
     }
 
     @Operation(summary = "Delete a stored product entry by product and warehouse IDs")
     @ApiResponses({
-        @ApiResponse(responseCode = "204", description = "Stored product deleted", content = @Content),
-        @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
+            @ApiResponse(responseCode = "204", description = "Stored product deleted", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Stored product not found", content = @Content)
     })
     @DeleteMapping("/product/{productId}/warehouse/{warehouseId}")
-    public ResponseEntity<ResponseWrapper<Object>> deleteStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
-        if (storedProductService.getStoredProduct(productId, warehouseId).isEmpty()) {
-            return ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null);
-        }
-        storedProductService.deleteStoredProduct(productId, warehouseId);
-        return ResponseHandler.generateResponse("Stored product deleted", HttpStatus.NO_CONTENT, null);
+    public Mono<ResponseEntity<ResponseWrapper<Object>>> deleteStoredProduct(@PathVariable Long productId, @PathVariable Long warehouseId) {
+        return Mono.deferContextual(ctx -> {
+            UserContext uc = ctx.get(UserContext.KEY);
+            if (!uc.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
+                return Mono.just(ResponseHandler.generateResponse("Stored product not found", HttpStatus.NOT_FOUND, null));
+            }
+            return storedProductService.deleteStoredProduct(productId, warehouseId).thenReturn(ResponseHandler.generateResponse("Stored product deleted", HttpStatus.NO_CONTENT, null));
+        });
     }
 }

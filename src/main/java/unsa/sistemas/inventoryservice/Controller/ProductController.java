@@ -12,8 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 import unsa.sistemas.inventoryservice.Config.Context.UserContext;
-import unsa.sistemas.inventoryservice.Config.Context.UserContextHolder;
 import unsa.sistemas.inventoryservice.DTOs.ProductDTO;
 import unsa.sistemas.inventoryservice.Models.Product;
 import unsa.sistemas.inventoryservice.Models.Role;
@@ -35,15 +35,17 @@ public class ProductController {
             @ApiResponse(responseCode = "403", description = "Forbidden access", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<ResponseWrapper<Product>> createProduct(@RequestBody ProductDTO dto) {
-        UserContext user = UserContextHolder.get();
+    public Mono<ResponseEntity<ResponseWrapper<Product>>> createProduct(@RequestBody Mono<ProductDTO> body) {
+        return Mono.deferContextual(ctx -> {
+            UserContext user = ctx.get(UserContext.KEY);
 
-        if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
-            return ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null);
-        }
+            if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
+                return Mono.just(ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null));
+            }
 
-        Product product = productService.createProduct(dto);
-        return ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, product);
+            return body.flatMap(dto -> productService.createProduct(dto)
+                    .map(product -> ResponseHandler.generateResponse("Created successfully", HttpStatus.CREATED, product)));
+        });
     }
 
     @Operation(summary = "Get all products", parameters = {
@@ -53,11 +55,12 @@ public class ProductController {
     })
     @ApiResponse(responseCode = "200", description = "List of products", content = @Content(schema = @Schema(implementation = Product.class)))
     @GetMapping
-    public ResponseEntity<ResponseWrapper<Page<Product>>> getAllProducts(
+    public Mono<ResponseEntity<ResponseWrapper<Page<Product>>>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String search) {
-        return ResponseHandler.generateResponse("Products fetched successfully", HttpStatus.OK, productService.getAllProducts(page, size, search));
+        return productService.getAllProducts(page, size, search)
+                .map(products -> ResponseHandler.generateResponse("Products fetched successfully", HttpStatus.OK, products));
     }
 
 
@@ -67,10 +70,10 @@ public class ProductController {
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<ResponseWrapper<Product>> getProductById(@PathVariable Long id) {
+    public Mono<ResponseEntity<ResponseWrapper<Product>>> getProductById(@PathVariable Long id) {
         return productService.getProductById(id)
                 .map(product -> ResponseHandler.generateResponse("Product found", HttpStatus.OK, product))
-                .orElseGet(() -> ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null));
+                .defaultIfEmpty(ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null));
     }
 
     @Operation(summary = "Update a product by ID")
@@ -79,18 +82,21 @@ public class ProductController {
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
     })
     @PutMapping("/{id}")
-    public ResponseEntity<ResponseWrapper<Product>> updateProduct(@PathVariable Long id, @RequestBody ProductDTO dto) {
-        UserContext user = UserContextHolder.get();
-        if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
-            return ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null);
-        }
-        try {
-            return ResponseHandler.generateResponse("Product updated successfully", HttpStatus.OK, productService.updateProduct(id, dto));
-        } catch (IllegalArgumentException e) {
-            return ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse("Failed to update product", HttpStatus.BAD_REQUEST, null);
-        }
+    public Mono<ResponseEntity<ResponseWrapper<Product>>> updateProduct(@PathVariable Long id, @RequestBody ProductDTO dto) {
+        return Mono.deferContextual(ctx -> {
+            UserContext user = ctx.get(UserContext.KEY);
+
+            if (!user.getRole().equals(Role.ROLE_EMPLOYEE.name())) {
+                return Mono.just(ResponseHandler.generateResponse("Unauthorized access", HttpStatus.FORBIDDEN, null));
+            }
+
+            return productService.updateProduct(id, dto)
+                    .map(product -> {
+                        if (product == null)
+                            return ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null);
+                        return ResponseHandler.generateResponse("Product updated successfully", HttpStatus.OK, product);
+                    });
+        });
     }
 
     @Operation(summary = "Delete a product by ID")
@@ -99,14 +105,8 @@ public class ProductController {
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<ResponseWrapper<Object>> deleteProduct(@PathVariable Long id) {
-        try {
-            productService.deleteProduct(id);
-            return ResponseHandler.generateResponse("Product deleted successfully", HttpStatus.NO_CONTENT, null);
-        } catch (IllegalArgumentException e) {
-            return ResponseHandler.generateResponse("Product not found", HttpStatus.NOT_FOUND, null);
-        } catch (Exception e) {
-            return ResponseHandler.generateResponse("Failed to delete product", HttpStatus.BAD_REQUEST, null);
-        }
+    public Mono<ResponseEntity<ResponseWrapper<Object>>> deleteProduct(@PathVariable Long id) {
+        return productService.deleteProduct(id)
+                .thenReturn(ResponseHandler.generateResponse("Product deleted successfully", HttpStatus.NO_CONTENT, null));
     }
 }

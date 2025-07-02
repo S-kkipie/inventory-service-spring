@@ -12,7 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
+import unsa.sistemas.inventoryservice.Config.Context.UserContext;
 import unsa.sistemas.inventoryservice.DTOs.WarehouseDTO;
+import unsa.sistemas.inventoryservice.Models.Role;
 import unsa.sistemas.inventoryservice.Models.Warehouse;
 import unsa.sistemas.inventoryservice.Services.Rest.WarehouseService;
 import unsa.sistemas.inventoryservice.Utils.ResponseHandler;
@@ -32,8 +35,16 @@ public class WarehouseController {
             @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<ResponseWrapper<Warehouse>> createWarehouse(@Valid @RequestBody WarehouseDTO dto) {
-        return ResponseHandler.generateResponse("Warehouse created successfully", HttpStatus.CREATED, warehouseService.createWarehouse(dto));
+    public Mono<ResponseEntity<ResponseWrapper<Warehouse>>> createWarehouse(@Valid @RequestBody Mono<WarehouseDTO> dto) {
+        return Mono.deferContextual(ctx -> {
+            UserContext uc = ctx.get(UserContext.KEY);
+
+            if (!uc.getRole().equals(Role.ROLE_ADMIN.name())) {
+                return Mono.just(ResponseHandler.generateResponse("You don't have access to this resource", HttpStatus.NOT_FOUND, null));
+            }
+
+            return dto.flatMap(warehouse -> warehouseService.createWarehouse(warehouse).map(created -> ResponseHandler.generateResponse("Warehouse created successfully", HttpStatus.OK, created)));
+        });
     }
 
     @Operation(summary = "Find warehouses or get all", parameters = {
@@ -43,8 +54,8 @@ public class WarehouseController {
     })
     @ApiResponse(responseCode = "200", description = "List of warehouses", content = @Content(schema = @Schema(implementation = Warehouse.class)))
     @GetMapping
-    public ResponseEntity<ResponseWrapper<Page<Warehouse>>> getAllWarehouses(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "") String search) {
-        return ResponseHandler.generateResponse("Warehouses fetched successfully", HttpStatus.OK, warehouseService.getAllWarehouses(page, size, search));
+    public Mono<ResponseEntity<ResponseWrapper<Page<Warehouse>>>> getAllWarehouses(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, @RequestParam(defaultValue = "") String search) {
+        return warehouseService.getAllWarehouses(page, size, search).map(warehouses -> ResponseHandler.generateResponse("Warehouses fetched successfully", HttpStatus.OK, warehouses));
     }
 
     @Operation(summary = "Get a warehouse by ID")
@@ -53,10 +64,14 @@ public class WarehouseController {
             @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
     })
     @GetMapping("/{id}")
-    public ResponseEntity<ResponseWrapper<Warehouse>> getWarehouseById(@PathVariable Long id) {
+    public Mono<ResponseEntity<ResponseWrapper<Warehouse>>> getWarehouseById(@PathVariable Long id) {
         return warehouseService.getWarehouseById(id)
-                .map(warehouse -> ResponseHandler.generateResponse("Warehouse found", HttpStatus.OK, warehouse))
-                .orElseGet(() -> ResponseHandler.generateResponse("Warehouse not found", HttpStatus.NOT_FOUND, null));
+                .map(warehouse -> {
+                    if (warehouse == null) {
+                        return ResponseHandler.generateResponse("Warehouse not found", HttpStatus.NOT_FOUND, null);
+                    }
+                    return ResponseHandler.generateResponse("Warehouse found", HttpStatus.OK, warehouse);
+                });
     }
 
     @Operation(summary = "Update a warehouse by ID")
@@ -65,10 +80,21 @@ public class WarehouseController {
             @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
     })
     @PutMapping("/{id}")
-    public ResponseEntity<ResponseWrapper<Warehouse>> updateWarehouse(@PathVariable Long id, @RequestBody WarehouseDTO dto) {
-        return warehouseService.updateWarehouse(id, dto)
-                .map(warehouse -> ResponseHandler.generateResponse("Warehouse updated", HttpStatus.OK, warehouse))
-                .orElseGet(() -> ResponseHandler.generateResponse("Warehouse not found", HttpStatus.NOT_FOUND, null));
+    public Mono<ResponseEntity<ResponseWrapper<Warehouse>>> updateWarehouse(@PathVariable Long id, @RequestBody WarehouseDTO dto) {
+        return Mono.deferContextual(ctx -> {
+            UserContext uc = ctx.get(UserContext.KEY);
+            if (!uc.getRole().equals(Role.ROLE_ADMIN.name())) {
+                return Mono.just(ResponseHandler.generateResponse("You don't have access to this resource", HttpStatus.NOT_FOUND, null));
+            }
+            return warehouseService.updateWarehouse(id, dto)
+                    .map(warehouse -> {
+                        if (warehouse == null) {
+                            return ResponseHandler.generateResponse("Warehouse not found", HttpStatus.NOT_FOUND, null);
+                        }
+                        return ResponseHandler.generateResponse("Warehouse updated", HttpStatus.OK, warehouse);
+                    });
+        });
+
     }
 
     @Operation(summary = "Delete a warehouse by ID")
@@ -77,11 +103,13 @@ public class WarehouseController {
             @ApiResponse(responseCode = "404", description = "Warehouse not found", content = @Content)
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<ResponseWrapper<Object>> deleteWarehouse(@PathVariable Long id) {
-        if (warehouseService.getWarehouseById(id).isEmpty()) {
-            return ResponseHandler.generateResponse("Warehouse not found", HttpStatus.NOT_FOUND, null);
-        }
-        warehouseService.deleteWarehouse(id);
-        return ResponseHandler.generateResponse("Warehouse deleted", HttpStatus.NO_CONTENT, null);
+    public Mono<ResponseEntity<ResponseWrapper<Object>>> deleteWarehouse(@PathVariable Long id) {
+        return Mono.deferContextual(ctx -> {
+            UserContext uc = ctx.get(UserContext.KEY);
+            if (!uc.getRole().equals(Role.ROLE_ADMIN.name())) {
+                return Mono.just(ResponseHandler.generateResponse("You don't have access to this resource", HttpStatus.NOT_FOUND, null));
+            }
+            return warehouseService.deleteWarehouse(id).thenReturn(ResponseHandler.generateResponse("Warehouse deleted successfully", HttpStatus.OK, null));
+        });
     }
 }

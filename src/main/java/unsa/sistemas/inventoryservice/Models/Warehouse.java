@@ -10,8 +10,11 @@ import java.time.LocalDateTime;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
+@Builder
 public class Warehouse {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
@@ -19,7 +22,7 @@ public class Warehouse {
 
 
     @ManyToOne
-    @JoinColumn(name = "subsidiary_id")
+    @JoinColumn(name = "subsidiary_id", nullable = false)
     private Subsidiary subsidiary;
 
     private Boolean enabled;

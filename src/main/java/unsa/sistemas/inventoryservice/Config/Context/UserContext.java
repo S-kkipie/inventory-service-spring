@@ -10,6 +10,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserContext {
+    public static final Class<UserContext> KEY = UserContext.class;
+
     private String username;
     private String role;
 }

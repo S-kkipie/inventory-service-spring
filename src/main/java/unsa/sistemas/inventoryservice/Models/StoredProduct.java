@@ -11,8 +11,10 @@ import unsa.sistemas.inventoryservice.Models.Keys.StoredProductKey;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@ToString
 public class StoredProduct {
     @EmbeddedId
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     StoredProductKey  id;
 
     @ManyToOne

@@ -5,47 +5,54 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import unsa.sistemas.inventoryservice.DTOs.ProductDTO;
 import unsa.sistemas.inventoryservice.Models.Product;
 import unsa.sistemas.inventoryservice.Repositories.ProductRepository;
 
-import java.util.Optional;
 
 @Service
 @AllArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
 
-    public Product createProduct(ProductDTO dto) {
-        Product product = new Product();
-        product.setName(dto.getName());
-        product.setDescription(dto.getDescription());
-        product.setPrice(dto.getPrice());
-        product.setImageUrl(dto.getImageUrl());
-        return productRepository.save(product);
+    public Mono<Product> createProduct(ProductDTO dto) {
+        return Mono.fromCallable(() -> {
+            Product product = new Product();
+            product.setName(dto.getName());
+            product.setDescription(dto.getDescription());
+            product.setPrice(dto.getPrice());
+            product.setImageUrl(dto.getImageUrl());
+            return productRepository.save(product);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public Page<Product> getAllProducts(int pageNumber, int size, String text) {
-        Pageable pageable = PageRequest.of(pageNumber, size);
-        return productRepository.findByNameContainingIgnoreCase(text, pageable);
+    public Mono<Page<Product>> getAllProducts(int pageNumber, int size, String text) {
+        return Mono.fromCallable(() -> {
+            Pageable pageable = PageRequest.of(pageNumber, size);
+            return productRepository.findByNameContainingIgnoreCase(text, pageable);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public Optional<Product> getProductById(Long id) {
-        return productRepository.findById(id);
+    public Mono<Product> getProductById(Long id) {
+        return Mono.fromCallable(() -> productRepository.findById(id).orElse(null))
+                   .subscribeOn(Schedulers.boundedElastic());
     }
 
-    public Product updateProduct(Long id, ProductDTO dto) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Product not found"));
-
-        product.setName(dto.getName());
-        product.setDescription(dto.getDescription());
-        product.setPrice(dto.getPrice());
-        product.setImageUrl(dto.getImageUrl());
-        return productRepository.save(product);
+    public Mono<Product> updateProduct(Long id, ProductDTO dto) {
+        return Mono.fromCallable(() -> {
+            Product product = productRepository.findById(id).orElse(null);
+            if (product == null) return null;
+            product.setName(dto.getName());
+            product.setDescription(dto.getDescription());
+            product.setPrice(dto.getPrice());
+            product.setImageUrl(dto.getImageUrl());
+            return productRepository.save(product);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public void deleteProduct(Long id) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        productRepository.deleteById(product.getId());
+    public Mono<Void> deleteProduct(Long id) {
+        return Mono.fromRunnable(() -> productRepository.findById(id).ifPresent(product -> productRepository.deleteById(product.getId()))).subscribeOn(Schedulers.boundedElastic()).then();
     }
 }

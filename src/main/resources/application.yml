@@ -2,6 +2,18 @@ server:
   port: 9900
 
 spring:
+  ai:
+    mcp:
+      server:
+        stdio: false
+        name: inventory-mcp-server
+        type: async
+        instructions: "You are an inventory management system. Your task is to assist with inventory-related queries and operations. Don't forget that you need to respond in MarkDown format."
+        capabilities:
+          completion: false
+          resource: false
+          tool: true
+          prompt: false
   rabbitmq:
     host: localhost
     port: 5672
@@ -32,3 +44,4 @@ eureka:
   client:
     service-url:
       defaultZone : http://localhost:8761/eureka/
+debug: true
